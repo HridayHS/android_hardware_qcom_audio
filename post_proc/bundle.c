@@ -899,10 +899,19 @@ int effect_command(effect_handle_t self, uint32_t cmdCode, uint32_t cmdSize,
         if (context->ops.set_device)
             context->ops.set_device(context, device);
         } break;
-    case EFFECT_CMD_SET_VOLUME:
+    case EFFECT_CMD_SET_VOLUME: {
+        // if pReplyData is NULL, VOL_CTRL is delegated to another effect
+        if (pReplyData == NULL) {
+            break;
+        }
+        if (pCmdData == NULL || cmdSize != 2 * sizeof(uint32_t) ||
+                replySize == NULL || *replySize < 2*sizeof(int32_t)) {
+            return -EINVAL;
+        }
+        memcpy(pReplyData, pCmdData, sizeof(int32_t)*2);
+        } break;
     case EFFECT_CMD_SET_AUDIO_MODE:
         break;
-
     case EFFECT_CMD_OFFLOAD: {
         output_context_t *out_ctxt;
 
