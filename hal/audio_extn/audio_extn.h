@@ -86,6 +86,12 @@ int audio_extn_parse_compress_metadata(struct stream_out *out,
                                        struct str_parms *parms);
 #endif
 
+#ifndef AUDIO_EXTN_POLICY_ENABLED
+#define AUDIO_OUTPUT_FLAG_VOIP_RX 0x800
+#define AUDIO_OUTPUT_FLAG_DIRECT_PCM 0x2000
+#endif
+
+
 #ifdef AUDIO_EXTN_FORMATS_ENABLED
 #define AUDIO_OUTPUT_BIT_WIDTH ((config->offload_info.bit_width == 32) ? 24\
                                    :config->offload_info.bit_width)

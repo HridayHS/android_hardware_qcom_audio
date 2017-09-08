@@ -3810,8 +3810,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                                                 devices, flags, format, out->sample_rate,
                                                 out->bit_width, out->channel_mask,
                                                 &out->app_type_cfg);
-    if ((out->usecase == USECASE_AUDIO_PLAYBACK_PRIMARY) ||
-        (flags & AUDIO_OUTPUT_FLAG_PRIMARY)) {
+if (flags & AUDIO_OUTPUT_FLAG_PRIMARY) {
         /* Ensure the default output is not selected twice */
         if(adev->primary_output == NULL)
             adev->primary_output = out;

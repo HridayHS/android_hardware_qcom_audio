@@ -76,6 +76,11 @@ static uint32_t wmaStdMaxAvgByteRateTbl[WMA_STD_NUM_FREQ][WMA_STD_NUM_CHANNELS] 
 #define AUDIO_DEVICE_OUT_PROXY 0x1000000
 #endif
 
+#ifndef AUDIO_EXTN_POLICY_ENABLED
+#define AUDIO_OUTPUT_FLAG_VOIP_RX 0x800
+#define AUDIO_OUTPUT_FLAG_DIRECT_PCM 0x2000
+#endif
+
 // ----------------------------------------------------------------------------
 
 class AudioPolicyManagerCustom: public AudioPolicyManager
@@ -86,7 +91,7 @@ public:
 
         virtual ~AudioPolicyManagerCustom() {}
 
-        status_t setDeviceConnectionStateInt(audio_devices_t device,
+       virtual status_t setDeviceConnectionState(audio_devices_t device,
                                           audio_policy_dev_state_t state,
                                           const char *device_address,
                                           const char *device_name);
@@ -95,6 +100,24 @@ public:
                                  audio_policy_forced_cfg_t config);
 
         virtual bool isOffloadSupported(const audio_offload_info_t& offloadInfo);
+
+        virtual audio_io_handle_t getOutput(audio_stream_type_t stream,
+                                            uint32_t samplingRate,
+                                            audio_format_t format,
+                                            audio_channel_mask_t channelMask,
+                                            audio_output_flags_t flags,
+                                            const audio_offload_info_t *offloadInfo);
+        virtual status_t getOutputForAttr(const audio_attributes_t *attr,
+                                          audio_io_handle_t *output,
+                                          audio_session_t session,
+                                          audio_stream_type_t *stream,
+                                          uid_t uid,
+                                          uint32_t samplingRate,
+                                          audio_format_t format,
+                                          audio_channel_mask_t channelMask,
+                                          audio_output_flags_t flags,
+                                          audio_port_handle_t selectedDeviceId,
+                                          const audio_offload_info_t *offloadInfo);
 
         virtual status_t getInputForAttr(const audio_attributes_t *attr,
                                          audio_io_handle_t *input,
@@ -174,19 +197,6 @@ private:
                 audio_channel_mask_t channelMask,
                 audio_output_flags_t flags,
                 const audio_offload_info_t *offloadInfo);
-        // internal method to fill offload info in case of Direct PCM
-        status_t getOutputForAttr(const audio_attributes_t *attr,
-                audio_io_handle_t *output,
-                audio_session_t session,
-                audio_stream_type_t *stream,
-                uid_t uid,
-                uint32_t samplingRate,
-                audio_format_t format,
-                audio_channel_mask_t channelMask,
-                audio_output_flags_t flags,
-                audio_port_handle_t selectedDeviceId,
-                const audio_offload_info_t *offloadInfo);
-        // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
 #ifdef VOICE_CONCURRENCY
         int mvoice_call_state;
