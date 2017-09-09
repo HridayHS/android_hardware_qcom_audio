@@ -91,7 +91,7 @@ public:
 
         virtual ~AudioPolicyManagerCustom() {}
 
-       virtual status_t setDeviceConnectionState(audio_devices_t device,
+        virtual status_t setDeviceConnectionState(audio_devices_t device,
                                           audio_policy_dev_state_t state,
                                           const char *device_address,
                                           const char *device_name);
@@ -112,31 +112,39 @@ public:
                                           audio_session_t session,
                                           audio_stream_type_t *stream,
                                           uid_t uid,
-                                          uint32_t samplingRate,
-                                          audio_format_t format,
-                                          audio_channel_mask_t channelMask,
+                                          const audio_config_t *config,
                                           audio_output_flags_t flags,
                                           audio_port_handle_t selectedDeviceId,
-                                          const audio_offload_info_t *offloadInfo);
-
+                                          audio_port_handle_t *portId);
+        virtual status_t startOutput(audio_io_handle_t output,
+                                     audio_stream_type_t stream,
+                                     audio_session_t session);
+        virtual status_t stopOutput(audio_io_handle_t output,
+                                    audio_stream_type_t stream,
+                                    audio_session_t session);
         virtual status_t getInputForAttr(const audio_attributes_t *attr,
                                          audio_io_handle_t *input,
                                          audio_session_t session,
                                          uid_t uid,
-                                         uint32_t samplingRate,
-                                         audio_format_t format,
-                                         audio_channel_mask_t channelMask,
+                                         const audio_config_base_t *config,
                                          audio_input_flags_t flags,
                                          audio_port_handle_t selectedDeviceId,
-                                         input_type_t *inputType);
+                                         input_type_t *inputType,
+                                         audio_port_handle_t *portId);
         // indicates to the audio policy manager that the input starts being used.
         virtual status_t startInput(audio_io_handle_t input,
-                                    audio_session_t session);
+                                    audio_session_t session,
+                                    concurrency_type__mask_t *concurrency);
         // indicates to the audio policy manager that the input stops being used.
         virtual status_t stopInput(audio_io_handle_t input,
                                    audio_session_t session);
-
         virtual void closeAllInputs();
+
+        virtual status_t startAudioSource(const struct audio_port_config *source,
+                                          const audio_attributes_t *attributes,
+                                          audio_io_handle_t *handle,
+                                          uid_t uid);
+        virtual status_t stopAudioSource(audio_io_handle_t handle);
 
 protected:
 
@@ -146,12 +154,6 @@ protected:
                                                    audio_devices_t device,
                                                    int delayMs = 0, bool force = false);
 
-        // selects the most appropriate device on output for current state
-        // must be called every time a condition that affects the device choice for a given output is
-        // changed: connected device, phone state, force use, output start, output stop..
-        // see getDeviceForStrategy() for the use of fromCache parameter
-        audio_devices_t getNewOutputDevice(const sp<AudioOutputDescriptor>& outputDesc,
-                                           bool fromCache);
         // returns true if given output is direct output
         bool isDirectOutput(audio_io_handle_t output);
 
@@ -165,6 +167,10 @@ protected:
          status_t stopSource(sp<AudioOutputDescriptor> outputDesc,
                             audio_stream_type_t stream,
                             bool forceDeviceUpdate);
+
+        status_t connectAudioSource(const sp<AudioSourceDescriptor>& sourceDesc);
+        status_t disconnectAudioSource(const sp<AudioSourceDescriptor>& sourceDesc);
+
         // event is one of STARTING_OUTPUT, STARTING_BEACON, STOPPING_OUTPUT, STOPPING_BEACON
         // returns 0 if no mute/unmute event happened, the largest latency of the device where
         //   the mute/unmute happened
@@ -184,6 +190,13 @@ protected:
         //parameter indicates if HDMI plug in/out detected
         bool mHdmiAudioEvent;
 private:
+        // Notify the policy client of any change of device state with AUDIO_IO_HANDLE_NONE,
+        // so that the client interprets it as global to audio hardware interfaces.
+        // It can give a chance to HAL implementer to retrieve dynamic capabilities associated
+        // to this device for example.
+        void broadcastDeviceConnectionState(audio_devices_t device,
+                                            audio_policy_dev_state_t state,
+                                            const String8 &device_address);
         // updates device caching and output for streams that can influence the
         //    routing of notifications
         void handleNotificationRoutingForStream(audio_stream_type_t stream);
@@ -197,6 +210,10 @@ private:
                 audio_channel_mask_t channelMask,
                 audio_output_flags_t flags,
                 const audio_offload_info_t *offloadInfo);
+        // internal function to derive a stream type value from audio attributes
+        audio_stream_type_t streamTypefromAttributesInt(const audio_attributes_t *attr);
+        bool     isValidAttributes(const audio_attributes_t *paa);
+        // Used for voip + voice concurrency usecase
         int mPrevPhoneState;
 #ifdef VOICE_CONCURRENCY
         int mvoice_call_state;
